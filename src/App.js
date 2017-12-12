@@ -166,22 +166,18 @@ class Cell extends Component{
     if(this.props.finish)style.backgroundColor = "#ff0000";
     if(this.props.top){
       style.borderTop = "1px solid #000000";
-      style.marginTop = "-2px";
     }
 
     if(this.props.bottom){
       style.borderBottom =  "1px solid #000000";
-      style.marginBottom = "-2px";
     }
 
     if(this.props.right){
       style.borderRight = "1px solid #000000";
-      style.marginRight = "-2px";
     }
 
     if(this.props.left){
       style.borderLeft = "1px solid #000000";
-      style.marginLeft= "-2px";
     }
     return (
       <td onClick={this.handleClick} style={style}>{this.state.filled? 'X' : null}</td>
