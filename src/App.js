@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
+import Cell from './maze/cell.js';
+var generator = require('./maze/generator.js');
 
 class App extends Component {
   constructor(props){
@@ -8,85 +10,125 @@ class App extends Component {
     this.state = {
       size : 20,
       value : 20,
-      maze : this.generateMazev2(20)
+      maze : this.generateMazev3(20)
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-    this.generateMazev2 = this.generateMazev2.bind(this);
+    this.generateMazev3 = this.generateMazev3.bind(this);
   }
 
-  generateMazev2 (size){
+  generateMazev3(size){ //proper implementation of ellers this time (which doesn't make the maze so vertical)
     var theMaze = new Array();
-    var row = new Array();
-    var nextrow = new Array();
-    for(var j = 1; j <= size; j++){
-      row.push({group: j, right : true, bottom: true, left:false , top:false, start: false, finish: false });
+    var oldrow = new Array();
+    for(var i = 0; i < size; i++){
+      oldrow.push({group: 0, left: false, right: true, top: false, bottom: true, start:false, finish:false});
+      oldrow[i].group = i;
     }
+
 
     for(var i = 0; i < size; i++){
-      //add any elements not in a set to a set
-      var minimumNewSet = i * size + 1;
-      for(var j = 0; j < size; j++){
-        if(row[j] === undefined){
-          row[j] = {group : minimumNewSet + j, right : true, bottom : true, left: false, top:false};
-        }
-      }
-
-      //randomly merge some rows
-      for(var j = 0; j < size-1; j++){
-        if(row[j].group !== row[j+1].group && Math.random() < 0.5){
-          row[j].right = false;
-          row[j+1].group = row[j].group;
-        }
-      }
-
-      //add one bottom connection to each group
-
-      //find all of the groups
-      var groups = [];
-      for(var j = 0; j < size; j++){
-        groups[row[j].group]= row[j].group;
-      }
-
-      //add exactly one bottom opening for the group
-      groups.forEach(function(group){
-        var finished = false;
-        while(!finished){
-          for(var j = 0; j < size; j++){
-            if(row[j].group === group && Math.random() < .25){
-              row[j].bottom = false;
-              nextrow[j] = {group: row[j].group, bottom: true, left: false, right: true, top:false};
-              finished = true;
-              break;
-            }
-          }
-        }
-      });
-
-      //merge everything together on the last set
-      if(i == size-1){
-        for(var j = 0; j< size-1; j++){
-          if(row[j].group !== row[j+1].group){
-            row[j].right = false;
-            row[j+1].group = row[j].group;
-          }
-        }
-      }
-
-      //add the row to the maze
+      var row = this.nextEllerRow(oldrow);
       theMaze.push(row);
-      //set up the next iteration's arrays to be the proper ones
-      row = nextrow;
-      nextrow = new Array();
+      oldrow = row.slice(); //ensures no passing by reference
     }
-    //add the borders to the maze
-    for(var j = 0; j< size; j++){
+    row = this.finishMaze(oldrow);
+    console.log(theMaze.length);
+    theMaze = this.addBorders(theMaze);
+    theMaze = this.addStartAndFinish(theMaze);
+    return theMaze;
+  }
+
+  nextEllerRow(row){
+    //set up the next row
+    row = this.setUpEllerRow(row);
+    //randomly add right walls
+    for(var j = 0; j < row.length-1; j++){
+      if(Math.random() < 0.5 && row[j].group !== row[j+1].group){
+        row = this.mergeGroups(row[j].group, row[j+1].group, row);
+        row[j].right = false;
+      }
+    }
+    row = this.addBottomOpenings(row);
+    console.log(row);
+    return row;
+  }
+
+  setUpEllerRow(row){
+    var newRow = new Array();
+    for(var j = 0; j < row.length; j++){
+      var group = row[j].group;
+      if(row[j].bottom){
+        group = generator();
+      }
+      newRow[j] = {group : group , left:false, right: true, top:false, bottom:true, start:false, finish:false};
+    }
+    return newRow;
+  }
+
+  mergeGroups(merger, mergee, row){
+    row.forEach(function(element, index, arr){
+      if(element.group == mergee){
+        arr[index].group = merger;
+      }
+    });
+    return row;
+  }
+
+  addBottomOpenings(row){
+    //map the groups to a list of element numbers
+    var groups = {};
+    row.forEach(function(element, index){
+      if(groups[element.group] == null || groups[element.group] == undefined){
+          groups[element.group] = {};
+          groups[element.group].indexes = [];
+          groups[element.group].open = false;
+      }
+      groups[element.group].indexes.push(index);
+    });
+    var keys = Object.keys(groups);
+    //iterate over each group. Ensure that there is at least one opening among them
+    keys.forEach(function(element, index){
+      var groupData = groups[element];
+      for(var j = 0; j < groupData.indexes.length-1; j++){
+        if(Math.random() < 0.5){//TODO remove debugging false
+          groups[element].open = true;
+          row[groupData.indexes[j]].bottom = false;
+        }
+      }
+      //Ensures that the final square has an opening if none of the others do
+      if(Math.random() < 0.5 || groupData.open == false){
+        groups[element].open = true;
+        row[groupData.indexes[groupData.indexes.length-1]].bottom = false;
+      }
+    });
+    return row;
+  }
+
+  finishMaze(row){
+    for(var j = 0; j < row.length-1; j++){
+      if(row[j].group !== row[j+1].group){
+        row[j].right = false;
+        row = this.mergeGroups(row[j].group, row[j+1].group, row);
+      }
+    }
+    return row;
+  }
+
+  addBorders(theMaze){
+    //iterate over each group. Ensure that there is at least one opening among them
+    var size = theMaze.length;
+    for(var j = 0; j < size; j++){
       theMaze[0][j].top = true;
-      theMaze[size-1][j].bottom = true;
       theMaze[j][0].left = true;
+
+      theMaze[size-1][j].bottom = true;
       theMaze[j][size-1].right = true;
     }
+    return theMaze;
+  }
 
+  addStartAndFinish(theMaze){
+    var size = theMaze.length;
     var startx = Math.floor(Math.random() * size);
     var starty = Math.floor(Math.random() * size);
     var finishx = Math.floor(Math.random() * size);
@@ -103,7 +145,7 @@ class App extends Component {
 
   handleSubmit(e){
     this.setState({size: this.state.value}, function(){
-      this.setState({maze: this.generateMazev2(this.state.size)});
+      this.setState({maze: this.generateMazev3(this.state.size)});
     });
     e.preventDefault();
   }
@@ -135,53 +177,10 @@ class Maze extends Component{
         });
         renderMaze[index] = <tr>{newRow}</tr>;
       });
-      return (<table>{renderMaze}</table>);
+      return (<table key={generator()}>{renderMaze}</table>); //call to generator to clear the maze each time a new one is generated
     }else{
       return (<p>Generating</p>);
     }
-
-
-  }
-}
-
-class Cell extends Component{
-  constructor(props){
-    super(props);
-//calculate the width & height of each table Cell
-    this.state = {
-      filled: false
-    };
-    this.handleClick = this.handleClick.bind(this);
-  }
-
-  handleClick(){
-    this.setState({filled : !this.state.filled});
-  }
-
-  render(){ //render the walls
-    var style = {};
-    style.width = "20px";
-    style.height = "20px";
-    if(this.props.start)style.backgroundColor = "#00ff00";
-    if(this.props.finish)style.backgroundColor = "#ff0000";
-    if(this.props.top){
-      style.borderTop = "1px solid #000000";
-    }
-
-    if(this.props.bottom){
-      style.borderBottom =  "1px solid #000000";
-    }
-
-    if(this.props.right){
-      style.borderRight = "1px solid #000000";
-    }
-
-    if(this.props.left){
-      style.borderLeft = "1px solid #000000";
-    }
-    return (
-      <td onClick={this.handleClick} style={style}>{this.state.filled? 'X' : null}</td>
-    );
   }
 }
 
