@@ -12,7 +12,11 @@ class Maze extends Component{
         });
         renderMaze[index] = <tr>{newRow}</tr>;
       });
-      return (<table>{renderMaze}</table>);
+      var style= {
+        marginLeft : "auto",
+        marginRight: "auto"
+      }
+      return (<table style={style}>{renderMaze}</table>);
     }else{
       return (<p>Generating</p>);
     }

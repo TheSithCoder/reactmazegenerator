@@ -10,14 +10,14 @@ class App extends Component {
     this.state = {
       size : 20,
       value : 20,
-      maze : this.generateMazev3(20)
+      maze : this.generateMaze(20)
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-    this.generateMazev3 = this.generateMazev3.bind(this);
+    this.generateMaze = this.generateMaze.bind(this);
   }
 
-  generateMazev3(size){ //proper implementation of ellers this time (which doesn't make the maze so vertical)
+  generateMaze(size){
     var theMaze = new Array();
     var oldrow = new Array();
     for(var i = 0; i < size; i++){
@@ -145,7 +145,7 @@ class App extends Component {
 
   handleSubmit(e){
     this.setState({size: this.state.value}, function(){
-      this.setState({maze: this.generateMazev3(this.state.size)});
+      this.setState({maze: this.generateMaze(this.state.size)});
     });
     e.preventDefault();
   }
