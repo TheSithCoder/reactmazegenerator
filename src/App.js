@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import Cell from './maze/cell.js';
-var generator = require('./maze/generator.js');
+var generator = require('./generator');
 
 class App extends Component {
   constructor(props){
